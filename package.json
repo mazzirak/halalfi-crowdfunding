@@ -1,0 +1,28 @@
+{
+  "name": "smart-contract",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@nomiclabs/hardhat-etherscan": "^3.1.8",
+    "@nomiclabs/hardhat-waffle": "^2.0.6",
+    "@openzeppelin/contracts": "^4.9.3",
+    "chai": "^5.2.0",
+    "dotenv": "^16.5.0",
+    "ethers": "^5.8.0",
+    "hardhat": "^2.24.0",
+    "hardhat-deploy": "^1.0.2",
+    "hardhat-gas-reporter": "^2.2.3",
+    "solidity-coverage": "^0.8.16"
+  },
+  "dependencies": {
+    "compile": "^0.0.2"
+  }
+}
