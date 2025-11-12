@@ -7,11 +7,12 @@ require("dotenv").config();
 const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY;
 const BSC_TESTNET_URL = process.env.BSC_TESTNET_URL;
 const BSC_MAINNET_URL = process.env.BSC_MAINNET_URL;
-const PRIVATE_KEY = process.env.PRIVATE_KEY;
+// const PRIVATE_KEY = process.env.PRIVATE_KEY;
+const PRIVATE_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
 module.exports = {
   solidity: {
-    version: "0.8.0",
+    version: "0.8.20",
     settings: {
       optimizer: {
         enabled: true,

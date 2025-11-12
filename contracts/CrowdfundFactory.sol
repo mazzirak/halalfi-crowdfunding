@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
 
 import {CrowdfundProject} from "./CrowdfundProject.sol";
 import {ICrowdfundProject} from "./interfaces/ICrowdfundProject.sol";
+import {ICrowdfundAdmin} from "./interfaces/ICrowdfundAdmin.sol";
 import {CrowdfundErrors} from "./libraries/CrowdfundErrors.sol";
 import {CrowdfundStructs} from "./libraries/CrowdfundStructs.sol";
 
@@ -13,12 +14,11 @@ import {CrowdfundStructs} from "./libraries/CrowdfundStructs.sol";
  * @dev This contract enables users to create instances of CrowdfundProject contracts.
  *      It keeps track of all deployed projects and their creators.
  */
-
 contract CrowdfundFactory {
     address public admin;
     address[] public allProjects;
 
-    address public constant USDT_TOKEN = 0x55d398326f99059fF775485246999027B3197955;
+    address public immutable paymentToken;
 
     mapping(address => address[]) public creatorProjects;
     mapping(address => bool) public isProject;
@@ -27,13 +27,12 @@ contract CrowdfundFactory {
     event ProjectCreated(address indexed creator, address project);
     event ReturnRequested(address indexed project, address indexed investor);
 
-    constructor() {
-        admin = msg.sender;
-    }
-
-    modifier onlyAdmin() {
-        require(msg.sender == admin, "Only admin can call this function");
-        _;
+    constructor(address _paymentToken, address _adminContract) {
+        require(_paymentToken != address(0), CrowdfundErrors.INVALID_PAYMENT_TOKEN);
+        require(_adminContract != address(0), CrowdfundErrors.INVALID_ADDRESS);
+        require(_adminContract.code.length > 0, CrowdfundErrors.ADMIN_MUST_BE_CONTRACT);
+        admin = _adminContract;
+        paymentToken = _paymentToken;
     }
 
     /**
@@ -60,6 +59,9 @@ contract CrowdfundFactory {
         uint256 minInvestment,
         uint256 maxInvestment
     ) external returns (address) {
+        require(startDate >= block.timestamp, CrowdfundErrors.INVALID_DATE);
+        require(raiseAmount > 0, CrowdfundErrors.INVALID_AMOUNT);
+        require(minInvestment > 0, CrowdfundErrors.INVALID_AMOUNT);
         require(endDate > startDate, CrowdfundErrors.INVALID_DATE);
         require(returnNotifyDate > endDate, CrowdfundErrors.INVALID_DATE);
         require(minInvestment <= maxInvestment, CrowdfundErrors.INVALID_AMOUNT);
@@ -81,7 +83,7 @@ contract CrowdfundFactory {
         CrowdfundProject project = new CrowdfundProject(
             admin,
             init,
-            USDT_TOKEN
+            paymentToken
         );
 
         address projectAddress = address(project);
@@ -110,12 +112,8 @@ contract CrowdfundFactory {
         return creatorProjects[creator];
     }
 
-    function getAdmin() external view returns (address) {
-        return admin;
-    }
-
     /**
-   * @notice Gets detailed info about a specific project.
+     * @notice Gets detailed info about a specific project.
      * @param project The address of the CrowdfundProject contract.
      * @return info Struct containing all project metadata.
      */
@@ -124,24 +122,40 @@ contract CrowdfundFactory {
         return ICrowdfundProject(project).getProjectInfo();
     }
 
+    /**
+    * @dev Public view function to retrieve the primary admin address.
+ * @return address The primary admin address for the contract
+ */
+    function getAdmin() external view returns (address) {
+        return admin;
+    }
 
+/**
+ * @dev Retrieves all projects an investor has invested in along with their investment amounts.
+ * Iterates through all approved projects to find those where the investor has made investments.
+ * @param investor The address of the investor to query
+ * @return CrowdfundStructs.ProjectDetail[] Array of project details for invested projects
+ * @return uint256[] Array of investment amounts corresponding to each project
+ */
     function getInvestorProjectsWithAmounts(address investor)
     external
     view
     returns (CrowdfundStructs.ProjectDetail[] memory, uint256[] memory)
     {
+        // First pass: Count how many projects the investor has invested in
         uint256 totalInvestedProjects = 0;
-
         for (uint256 i = 0; i < allProjects.length; i++) {
             if (ICrowdfundProject(allProjects[i]).getInvestment(investor) > 0) {
                 totalInvestedProjects++;
             }
         }
 
+        // Initialize return arrays with the exact size needed
         CrowdfundStructs.ProjectDetail[] memory projectDetails =
                     new CrowdfundStructs.ProjectDetail[](totalInvestedProjects);
         uint256[] memory amounts = new uint256[](totalInvestedProjects);
 
+        // Second pass: Populate the arrays with project details and investment amounts
         uint256 index = 0;
         for (uint256 i = 0; i < allProjects.length; i++) {
             address projectAddress = allProjects[i];
@@ -149,28 +163,30 @@ contract CrowdfundFactory {
             uint256 investment = project.getInvestment(investor);
 
             if (investment > 0) {
+
                 CrowdfundStructs.ProjectInfo memory info = project.getProjectInfo();
 
+                // Construct detailed project information
                 projectDetails[index] = CrowdfundStructs.ProjectDetail({
-                    projectAddress: projectAddress,
-                    creator: info.creator,
-                    title: info.title,
-                    description: info.description,
-                    documents: info.documents,
-                    startDate: info.startDate,
-                    endDate: info.endDate,
-                    returnNotifyDate: info.returnNotifyDate,
-                    raiseAmount: info.raiseAmount,
-                    minInvestment: info.minInvestment,
-                    maxInvestment: info.maxInvestment,
-                    totalRaised: project.getTotalRaised(),
-                    status: project.getStatus(),
-                    paymentToken: project.getPaymentToken(),
-                    returnInfo: project.getReturnInfo(),
-                    rejectionReason: project.getRejectionReason()
+                    projectAddress: projectAddress,           // Address of the project contract
+                    creator: info.creator,                    // Project creator address
+                    title: info.title,                        // Project title
+                    description: info.description,            // Project description
+                    documents: info.documents,                // Project documents
+                    startDate: info.startDate,                // Project start date
+                    endDate: info.endDate,                    // Project end date
+                    returnNotifyDate: info.returnNotifyDate,  // Return notification date
+                    raiseAmount: info.raiseAmount,            // Target funding amount
+                    minInvestment: info.minInvestment,        // Minimum investment allowed
+                    maxInvestment: info.maxInvestment,        // Maximum investment allowed
+                    totalRaised: project.getTotalRaised(),    // Total amount raised by the project
+                    status: project.getStatus(),              // Current project status
+                    paymentToken: project.getPaymentToken(),  // Token used for payments
+                    returnInfo: project.getReturnInfo(),      // Investment return information
+                    rejectionReason: project.getRejectionReason() // Reason if project was rejected
                 });
 
-                amounts[index] = investment;
+                amounts[index] = investment; // Store the investment amount
                 index++;
             }
         }
@@ -179,7 +195,7 @@ contract CrowdfundFactory {
     }
 
     /**
-    * @notice Investor signals that they expect returns to be processed.
+     * @notice Investor signals that they expect returns to be processed.
      * @param project The project address to mark as needing returns.
      */
     function requestReturn(address project) external {
@@ -188,10 +204,11 @@ contract CrowdfundFactory {
         returnRequested[project] = true;
         emit ReturnRequested(project, msg.sender);
     }
+
     /**
- * @notice Retrieves detailed info about all crowdfunding projects.
- * @return An array of ProjectDetail structs containing full project information.
- */
+     * @notice Retrieves detailed info about all crowdfunding projects.
+     * @return An array of ProjectDetail structs containing full project information.
+     */
     function getAllProjectsDetails() external view returns (CrowdfundStructs.ProjectDetail[] memory) {
         address[] memory projects = this.getAllProjects();
         uint256 projectCount = projects.length;
@@ -224,5 +241,16 @@ contract CrowdfundFactory {
         }
 
         return projectDetails;
+    }
+
+    /**
+     * @notice Update admin contract address (only callable by current admin)
+     * @param newAdminContract New admin contract address
+     */
+    function updateAdmin(address newAdminContract) external {
+        require(ICrowdfundAdmin(admin).checkAdmin(msg.sender), CrowdfundErrors.NOT_ADMIN);
+        require(newAdminContract != address(0), CrowdfundErrors.INVALID_ADDRESS);
+        require(newAdminContract.code.length > 0, CrowdfundErrors.ADMIN_MUST_BE_CONTRACT);
+        admin = newAdminContract;
     }
 }

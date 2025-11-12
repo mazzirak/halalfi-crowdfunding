@@ -1,0 +1,13 @@
+export const addresses = {
+  "CrowdfundAdmin": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
+  "CrowdfundFactory": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
+  "USDT": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"
+};
+
+export const networkConfig = {
+    USDT_ADDRESS: "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+    PLATFORM_FEE_PERCENT: 1,
+    CREATOR_WITHDRAWAL_DEADLINE_DAYS: 7,
+    CHAIN_ID: 31337,
+    NETWORK_NAME: "unknown",
+};

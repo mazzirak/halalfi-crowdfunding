@@ -1,0 +1,22 @@
+{
+  "network": {
+    "name": "unknown",
+    "chainId": 31337
+  },
+  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "timestamp": "2025-11-12T13:14:54.164Z",
+  "contracts": {
+    "CrowdfundAdmin": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
+    "CrowdfundFactory": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
+    "USDT": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"
+  },
+  "configuration": {
+    "platformFeePercent": 1,
+    "creatorWithdrawalDeadlineDays": 7
+  },
+  "nextSteps": [
+    "Using Mock USDT for local testing",
+    "Test project creation and investment flow",
+    "Connect MetaMask to localhost"
+  ]
+}
