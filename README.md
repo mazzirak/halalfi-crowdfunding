@@ -873,31 +873,4 @@ If you find this project useful, please consider giving it a star ⭐
 
 </div>
 
----
 
-<div align="center">
-
-### 📊 Project Stats
-
-![GitHub stars](https://img.shields.io/github/stars/MazyarZirak/halalfi-crowdfunding?style=social)
-![GitHub forks](https://img.shields.io/github/forks/MazyarZirak/halalfi-crowdfunding?style=social)
-![GitHub watchers](https://img.shields.io/github/watchers/MazyarZirak/halalfi-crowdfunding?style=social)
-
-![GitHub issues](https://img.shields.io/github/issues/mazyarzi/halalfi-crowdfunding)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/mazyarzi/halalfi-crowdfunding)
-![GitHub last commit](https://img.shields.io/github/last-commit/mazyarzi/halalfi-crowdfunding)
-
-</div># 🌟 HalalFi Crowdfunding DApp
-
-<div align="center">
-
-![Solidity](https://img.shields.io/badge/Solidity-0.8.20-363636?style=for-the-badge&logo=solidity)
-![Hardhat](https://img.shields.io/badge/Hardhat-2.19.0-yellow?style=for-the-badge&logo=hardhat)
-![OpenZeppelin](https://img.shields.io/badge/OpenZeppelin-5.0.0-4E5EE4?style=for-the-badge&logo=openzeppelin)
-![License](https://img.shields.io/badge/License-UNLICENSED-red?style=for-the-badge)
-
-**A Decentralized Crowdfunding Platform Built on Ethereum**
-
-[Features](#-features) • [Architecture](#-architecture) • [Installation](#-installation) • [Usage](#-usage) • [Security](#-security) • [Deployment](#-deployment)
-
-</div>
