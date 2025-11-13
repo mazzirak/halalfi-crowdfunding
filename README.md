@@ -833,7 +833,7 @@ For licensing inquiries, contact: mazyarzirak1@gmail.com
 
 ## 👨‍💻 Author
 
-**Mazyar Zirak Hologhi**
+**Mazyar Zirak **
 
 - 📧 Email: mazyarzirak1@gmail.com
 - 🐙 GitHub: [@MazyarZirak](https://github.com/mazyarzi)
@@ -846,7 +846,7 @@ For licensing inquiries, contact: mazyarzirak1@gmail.com
 - **OpenZeppelin** - Security libraries and best practices
 - **Hardhat** - Development environment
 - **Ethers.js** - Ethereum interaction library
-- **Community Auditors** - Security review and feedback
+- **[Immunefi](https://immunefi.com/) Auditors** - Security review and feedback
 
 ---
 
