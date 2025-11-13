@@ -27,6 +27,9 @@ contract CrowdfundFactory {
     event ProjectCreated(address indexed creator, address project);
     event ReturnRequested(address indexed project, address indexed investor);
 
+    event AdminUpdated(address indexed oldAdmin, address indexed newAdmin);
+    event ProjectAdminUpdated(address indexed project, address indexed newAdmin);
+    
     constructor(address _paymentToken, address _adminContract) {
         require(_paymentToken != address(0), CrowdfundErrors.INVALID_PAYMENT_TOKEN);
         require(_adminContract != address(0), CrowdfundErrors.INVALID_ADDRESS);
@@ -35,6 +38,133 @@ contract CrowdfundFactory {
         paymentToken = _paymentToken;
     }
 
+    /**
+    * @notice Update admin contract address for factory and optionally migrate existing projects
+     * @param newAdminContract New admin contract address
+     * @param migrateExisting Whether to update admin for all existing projects
+     */
+    function updateAdmin(address newAdminContract, bool migrateExisting) external {
+        require(ICrowdfundAdmin(admin).checkAdmin(msg.sender), CrowdfundErrors.NOT_ADMIN);
+        require(newAdminContract != address(0), CrowdfundErrors.INVALID_ADDRESS);
+        require(newAdminContract.code.length > 0, CrowdfundErrors.ADMIN_MUST_BE_CONTRACT);
+        require(newAdminContract != admin, CrowdfundErrors.ALREADY_EXISTS);
+
+        address oldAdmin = admin;
+        admin = newAdminContract;
+
+        emit AdminUpdated(oldAdmin, newAdminContract);
+
+        // Optionally migrate all existing projects
+        if (migrateExisting) {
+            _migrateProjectsToNewAdmin(newAdminContract);
+        }
+    }
+
+    /**
+     * @notice Batch update admin for multiple projects
+     * @param projects Array of project addresses to update
+     * @param newAdminContract New admin contract address
+     */
+    function batchUpdateProjectAdmin(
+        address[] calldata projects,
+        address newAdminContract
+    ) external {
+        require(ICrowdfundAdmin(admin).checkAdmin(msg.sender), CrowdfundErrors.NOT_ADMIN);
+        require(newAdminContract != address(0), CrowdfundErrors.INVALID_ADDRESS);
+        require(newAdminContract.code.length > 0, CrowdfundErrors.ADMIN_MUST_BE_CONTRACT);
+
+        uint256 length = projects.length;
+        for (uint256 i; i < length;) {
+            address project = projects[i];
+            require(isProject[project], CrowdfundErrors.NOT_PROJECT);
+
+            ICrowdfundProject(project).updateAdmin(newAdminContract);
+            emit ProjectAdminUpdated(project, newAdminContract);
+
+            unchecked { ++i; }
+        }
+    }
+
+
+    /**
+    * @notice Update admin for a single project
+     * @param project Project address to update
+     * @param newAdminContract New admin contract address
+     */
+    function updateProjectAdmin(
+        address project,
+        address newAdminContract
+    ) external {
+        require(ICrowdfundAdmin(admin).checkAdmin(msg.sender), CrowdfundErrors.NOT_ADMIN);
+        require(isProject[project], CrowdfundErrors.NOT_PROJECT);
+        require(newAdminContract != address(0), CrowdfundErrors.INVALID_ADDRESS);
+        require(newAdminContract.code.length > 0, CrowdfundErrors.ADMIN_MUST_BE_CONTRACT);
+
+        ICrowdfundProject(project).updateAdmin(newAdminContract);
+        emit ProjectAdminUpdated(project, newAdminContract);
+    }
+
+    /**
+     * @dev Internal function to migrate all projects to new admin
+     * @param newAdminContract New admin contract address
+     */
+    function _migrateProjectsToNewAdmin(address newAdminContract) private {
+        uint256 length = allProjects.length;
+        for (uint256 i; i < length;) {
+            address project = allProjects[i];
+
+            try ICrowdfundProject(project).updateAdmin(newAdminContract) {
+                emit ProjectAdminUpdated(project, newAdminContract);
+            } catch {
+                // Continue even if one project fails
+                // Projects can be updated individually later
+            }
+
+            unchecked { ++i; }
+        }
+    }
+
+    /**
+     * @notice Get projects that still use old admin contract
+     * @param oldAdmin Old admin contract address
+     * @return address[] Array of project addresses still using old admin
+     */
+    function getProjectsWithOldAdmin(address oldAdmin) external view returns (address[] memory) {
+        uint256 count;
+        uint256 length = allProjects.length;
+
+        // Count projects with old admin
+        for (uint256 i; i < length;) {
+            try ICrowdfundProject(allProjects[i]).getAdmin() returns (address projectAdmin) {
+                if (projectAdmin == oldAdmin) {
+                    unchecked { ++count; }
+                }
+            } catch {
+                // Skip projects that don't have getAdmin()
+            }
+            unchecked { ++i; }
+        }
+
+        // Build result array
+        address[] memory result = new address[](count);
+        uint256 index;
+
+        for (uint256 i; i < length;) {
+            try ICrowdfundProject(allProjects[i]).getAdmin() returns (address projectAdmin) {
+                if (projectAdmin == oldAdmin) {
+                    result[index] = allProjects[i];
+                    unchecked { ++index; }
+                }
+            } catch {
+                // Skip
+            }
+            unchecked { ++i; }
+        }
+
+        return result;
+    }
+    
+    
     /**
      * @notice Creates a new crowdfunding project.
      * @param title The title of the crowdfunding project.

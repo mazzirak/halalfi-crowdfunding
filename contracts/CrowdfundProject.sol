@@ -29,7 +29,7 @@ contract CrowdfundProject is ICrowdfundProject, ICrowdfundInvestor, ReentrancyGu
     CrowdfundStructs.ProjectInfo private projectInfo;
     CrowdfundStructs.ProjectReturn private returnInfo;
     ProjectStorage private projectStorage;
-    address public immutable admin;
+    address public admin;
     address public immutable factory;
     address public immutable creator;
     address public immutable paymentToken;
@@ -47,6 +47,7 @@ contract CrowdfundProject is ICrowdfundProject, ICrowdfundInvestor, ReentrancyGu
     event ProjectApproved(address indexed approver);
     event ProjectRejected(address indexed rejector, string reason);
     event ProjectMarkedAsDefaulted(address indexed admin, string reason);
+    event AdminUpdated(address indexed oldAdmin, address indexed newAdmin, address indexed updater);
 
     bool public hasCreatorWithdrawnFunds;
     uint256 public constant PLATFORM_FEE_PERCENT = 1; // 1% platform fee
@@ -62,7 +63,8 @@ contract CrowdfundProject is ICrowdfundProject, ICrowdfundInvestor, ReentrancyGu
         require(init.minInvestment <= init.maxInvestment, CrowdfundErrors.INVALID_AMOUNT);
         require(init.maxInvestment <= init.raiseAmount, CrowdfundErrors.INVALID_AMOUNT);
         require(_paymentToken != address(0), CrowdfundErrors.INVALID_PAYMENT_TOKEN);
-
+        require(_admin != address(0), CrowdfundErrors.INVALID_ADDRESS);
+        require(_admin.code.length > 0, CrowdfundErrors.ADMIN_MUST_BE_CONTRACT);
         admin = _admin;
         factory = msg.sender;
         creator = init.creator;
@@ -86,6 +88,66 @@ contract CrowdfundProject is ICrowdfundProject, ICrowdfundInvestor, ReentrancyGu
  */
     function hasUserClaimedRefund(address user) external view returns (bool) {
         return hasClaimedRefund[user];
+    }
+
+    /**
+     * @notice Update the admin contract address for this project
+     * @dev Only callable by current admin or factory. Allows migration to new admin contract.
+     * @param newAdmin Address of the new admin contract
+     */
+    function updateAdmin(address newAdmin) external {
+        // Allow both current admin and factory to update
+        require(
+            msg.sender == admin ||
+            msg.sender == factory ||
+            ICrowdfundAdmin(admin).checkAdmin(msg.sender),
+            CrowdfundErrors.NOT_ADMIN
+        );
+        require(newAdmin != address(0), CrowdfundErrors.INVALID_ADDRESS);
+        require(newAdmin.code.length > 0, CrowdfundErrors.ADMIN_MUST_BE_CONTRACT);
+        require(newAdmin != admin, CrowdfundErrors.ALREADY_EXISTS);
+
+        address oldAdmin = admin;
+        admin = newAdmin;
+
+        emit AdminUpdated(oldAdmin, newAdmin, msg.sender);
+    }
+
+    /**
+     * @notice Get the current admin contract address
+     * @return address The admin contract address
+     */
+    function getAdmin() external view returns (address) {
+        return admin;
+    }
+
+    /**
+    * @dev Modifier that restricts function access to admin addresses or the admin contract itself.
+     * Accepts calls from:
+     * 1. The admin contract address directly (for cross-contract calls)
+     * 2. Any address registered as an admin in the admin contract
+     * Reverts if the caller is neither.
+     */
+    modifier onlyAdmin() {
+        require(
+            msg.sender == admin || ICrowdfundAdmin(admin).checkAdmin(msg.sender),
+            CrowdfundErrors.NOT_ADMIN
+        );
+        _;
+    }
+
+    /**
+      * @dev Modifier that restricts function access to the project creator only.
+     * Reverts if the caller is not the project creator.
+     */
+    modifier onlyCreator() {
+        require(msg.sender == creator, CrowdfundErrors.NOT_CREATOR);
+        _;
+    }
+
+    modifier onlyActive() {
+        require(projectStorage.status == CrowdfundStructs.ProjectStatus.Active, CrowdfundErrors.PROJECT_NOT_ACTIVE);
+        _;
     }
 
 /**
@@ -447,38 +509,6 @@ contract CrowdfundProject is ICrowdfundProject, ICrowdfundInvestor, ReentrancyGu
      */
     function getCreatorWithdrawalDeadline() external view returns (uint256) {
         return projectInfo.endDate + CREATOR_WITHDRAWAL_DEADLINE;
-    }
-
-    /**
-   * @dev Modifier that restricts function access to admin addresses only.
- * Checks admin status through the main crowdfund admin contract.
- * Reverts if the caller is not an admin.
- */
-    modifier onlyAdmin() {
-        require(ICrowdfundAdmin(admin).checkAdmin(msg.sender), CrowdfundErrors.NOT_ADMIN);
-        require(
-            msg.sender == admin || ICrowdfundAdmin(admin).checkAdmin(msg.sender),
-            CrowdfundErrors.NOT_ADMIN
-        );
-        _;
-    }
-
-/**
- * @dev Modifier that restricts function access to the project creator only.
- * Reverts if the caller is not the project creator.
- */
-    modifier onlyCreator() {
-        require(msg.sender == creator, CrowdfundErrors.NOT_CREATOR);
-        _;
-    }
-
-/**
- * @dev Modifier that restricts function access to when the project is in Active status.
- * Reverts if the project status is not Active.
- */
-    modifier onlyActive() {
-        require(projectStorage.status == CrowdfundStructs.ProjectStatus.Active, CrowdfundErrors.PROJECT_NOT_ACTIVE);
-        _;
     }
 
 /**

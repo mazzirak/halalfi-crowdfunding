@@ -14,4 +14,6 @@ interface ICrowdfundProject {
     function getReturnInfo() external view returns (CrowdfundStructs.ProjectReturn memory);
     function getPaymentToken() external view returns (address);
     function getRejectionReason() external view returns (string memory);
+    function updateAdmin(address newAdmin) external; 
+    function getAdmin() external view returns (address); 
 }
