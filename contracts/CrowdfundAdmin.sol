@@ -24,6 +24,8 @@ contract CrowdfundAdmin is ICrowdfundAdmin {
     constructor() {
         admin = msg.sender;
         isAdmin[msg.sender] = true;
+        isAdmin[address(this)] = true;
+        emit AdminAdded(address(this));
     }
 
     /**

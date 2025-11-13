@@ -456,6 +456,10 @@ contract CrowdfundProject is ICrowdfundProject, ICrowdfundInvestor, ReentrancyGu
  */
     modifier onlyAdmin() {
         require(ICrowdfundAdmin(admin).checkAdmin(msg.sender), CrowdfundErrors.NOT_ADMIN);
+        require(
+            msg.sender == admin || ICrowdfundAdmin(admin).checkAdmin(msg.sender),
+            CrowdfundErrors.NOT_ADMIN
+        );
         _;
     }
 
